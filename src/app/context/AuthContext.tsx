@@ -1,69 +1,20 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { io, Socket } from "socket.io-client";
-import dotenv from "dotenv";
 import axios from "axios";
 import { format } from "date-fns";
-
-dotenv.config();
-
-interface User {
-    id: number;
-    full_name: string;
-    email: string;
-}
-
-interface Message {
-    id: number;
-    userId: number;
-    content: string;
-    createdAt: string;
-    user?: { fullName: string };
-}
-
-interface AuthContextProps {
-    user: User | null;
-    messages: Message[];
-    loading: boolean;
-    login: (email: string, password: string) => Promise<void>;
-    register: (full_name: string, email: string, password: string) => Promise<void>;
-    logout: () => Promise<void>;
-}
+import { connectSocket, getSocket } from "@/app/services/socket";
+import {User} from "@/app/types/user-types";
+import {Message} from "@/app/types/message-types";
+import {AuthContextProps} from "@/app/types/auth-types";
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
-
-let socket: Socket | null = null;
-
-const connectWebSocket = (token: string, setMessages: React.Dispatch<React.SetStateAction<Message[]>>) => {
-    if (socket) {
-        socket.disconnect();
-    }
-
-    socket = io("ws://localhost:3333", { auth: { token } });
-
-    socket.on("messages", (msgs: Message[]) => {
-        setMessages(msgs.map((msg) => ({ ...msg, createdAt: format(new Date(msg.createdAt), "HH:mm") })));
-    });
-
-    socket.on("message", (msg: Message) => {
-        let formattedTimestamp = "Horário desconhecido";
-
-        if (msg.createdAt) {
-            const date = new Date(msg.createdAt);
-            if (!isNaN(date.getTime())) {
-                formattedTimestamp = format(date, "HH:mm");
-            }
-        }
-
-        setMessages((prev) => [...prev, { ...msg, createdAt: formattedTimestamp }]);
-    });
-};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [typingUsers, setTypingUsers] = useState<Record<number, string>>({});
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -71,11 +22,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (token && storedUser) {
             setUser(JSON.parse(storedUser));
-            connectWebSocket(token, setMessages);
+            connectWebSocket(token);
         }
 
         setLoading(false);
     }, []);
+
+    const connectWebSocket = (token: string) => {
+        const socket = connectSocket(token);
+
+        socket.on("messages", (msgs: Message[]) => {
+            setMessages(msgs.map((msg) => ({ ...msg, createdAt: format(new Date(msg.createdAt), "HH:mm") })));
+        });
+
+        socket.on("message", (msg: Message) => {
+            let formattedTimestamp = "Horário desconhecido";
+
+            if (msg.createdAt) {
+                const date = new Date(msg.createdAt);
+                if (!isNaN(date.getTime())) {
+                    formattedTimestamp = format(date, "HH:mm");
+                }
+            }
+
+            setMessages((prev) => [...prev, { ...msg, createdAt: formattedTimestamp }]);
+        });
+
+        socket.on("typing", ({ userId, fullName }) => {
+            setTypingUsers((prev) => ({ ...prev, [userId]: fullName }));
+        });
+
+        socket.on("stop_typing", ({ userId }) => {
+            setTypingUsers((prev) => {
+                const updated = { ...prev };
+                delete updated[userId];
+                return updated;
+            });
+        });
+    };
+
+    const updateTypingUsers = (callback: (prev: Record<number, string>) => Record<number, string>) => {
+        setTypingUsers(callback);
+    };
 
     const login = async (email: string, password: string) => {
         try {
@@ -88,15 +76,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 setUser(data.user);
 
-                if (socket) {
-                    socket.disconnect();
-                    socket = null;
+                const existingSocket = getSocket();
+                if (existingSocket) {
+                    existingSocket.disconnect();
                 }
 
-                connectWebSocket(data.token, setMessages);
+                connectWebSocket(data.token);
             }
         } catch (error) {
-            console.error("❌ Erro ao fazer login:", error);
+            console.error("Erro ao fazer login:", error);
         }
     };
 
@@ -115,21 +103,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.removeItem("token");
             localStorage.removeItem("user");
 
+            const socket = getSocket();
             if (socket) {
                 socket.disconnect();
-                socket = null;
             }
 
             setUser(null);
             setMessages([]);
+            setTypingUsers({});
+
         } catch (error) {
             console.error("Erro ao deslogar:", error);
         }
     };
 
     return (
-        <AuthContext.Provider value={{ user, messages, loading, login, register, logout }}>
-            {children}
+        <AuthContext.Provider value={{ user, messages, typingUsers, loading, login, register, logout, updateTypingUsers }}>
+        {children}
         </AuthContext.Provider>
     );
 }

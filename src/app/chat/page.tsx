@@ -3,45 +3,55 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/navigation";
-import io, { Socket } from "socket.io-client";
+import { Socket } from "socket.io-client";
 import ChatHeader from "../components/ChatHeader";
 import ChatMessages from "../components/ChatMessages";
 import ChatInput from "../components/ChatInput";
 import { Message } from "@/app/types/message-types";
 import { withAuth } from "../hoc/withAuth";
+import {connectSocket, getSocket} from "@/app/services/socket";
 
 function Chat() {
     const { user, logout } = useAuth();
     const router = useRouter();
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
-    const [socket, setSocket] = useState<Socket | null>(null);
+    const [socket] = useState<Socket | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null as unknown as HTMLDivElement);
+    const { typingUsers } = useAuth();
+    const { updateTypingUsers } = useAuth();
 
     useEffect(() => {
         if (!user) router.push("/login");
     }, [user, router]);
 
     useEffect(() => {
-        if (!user || socket) return;
+        if (!user) return;
 
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const newSocket = io("http://localhost:3333", {
-            auth: { token },
-            reconnectionAttempts: 5,
-            reconnectionDelay: 2000,
+        const socket = connectSocket(token);
+
+        socket.on("messages", setMessages);
+        socket.on("message", (message: Message) => setMessages((prev) => [...prev, message]));
+
+        socket.on("typing", ({ userId, fullName }) => {
+            updateTypingUsers((prev) => ({ ...prev, [userId]: fullName }));
         });
 
-        newSocket.on("messages", setMessages);
-        newSocket.on("message", (message: Message) => setMessages((prev) => [...prev, message]));
-
-        setSocket(newSocket);
+        socket.on("stop_typing", ({ userId }) => {
+            updateTypingUsers((prev) => {
+                const updated = { ...prev };
+                delete updated[userId];
+                return updated;
+            });
+        });
 
         return () => {
-            newSocket.disconnect();
-            setSocket(null);
+            socket.disconnect();
+            socket.off("typing");
+            socket.off("stop_typing");
         };
     }, [user]);
 
@@ -50,7 +60,9 @@ function Chat() {
     }, [messages]);
 
     const sendMessage = () => {
+        const socket = getSocket();
         if (!input.trim() || !socket) return;
+
         socket.emit("message", input);
         setInput("");
     };
@@ -60,6 +72,12 @@ function Chat() {
             <div className="w-full max-w-md rounded-xl shadow-lg overflow-hidden">
                 <ChatHeader logout={logout} />
                 <ChatMessages messages={messages} userId={user?.id?.toString()} messagesEndRef={messagesEndRef} />
+
+                <div className="text-gray-500 text-sm bg-white px-4 h-3">
+                    {Object.values(typingUsers).length > 0 &&
+                        `${Object.values(typingUsers).join(", ")} está digitando...`}
+                </div>
+
                 <ChatInput input={input} setInput={setInput} sendMessage={sendMessage} />
             </div>
         </div>
