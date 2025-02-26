@@ -3,21 +3,15 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/navigation";
-import io from "socket.io-client";
+import io, { Socket } from "socket.io-client";
 import { MessageCircle, LogOut, Send } from 'lucide-react';
-
-const socket = io("http://localhost:3333", {
-    auth: {
-        token: typeof window !== "undefined" ? localStorage.getItem("token") : "",
-    },
-});
 
 interface Message {
     id: number;
     userId: number;
     content: string;
     createdAt: string;
-    user?: { name: string };
+    user?: { fullName: string };
 }
 
 export default function Chat() {
@@ -25,6 +19,7 @@ export default function Chat() {
     const router = useRouter();
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
+    const [socket, setSocket] = useState<Socket | null>(null);
 
     useEffect(() => {
         if (!user) {
@@ -33,23 +28,30 @@ export default function Chat() {
     }, [user, router]);
 
     useEffect(() => {
-        socket.on("messages", (loadedMessages: Message[]) => {
+        if (!user) return;
+
+        const newSocket = io("http://localhost:3333", {
+            auth: { token: localStorage.getItem("token") },
+        });
+
+        newSocket.on("messages", (loadedMessages: Message[]) => {
             setMessages(loadedMessages);
         });
 
-        socket.on("message", (message: Message) => {
+        newSocket.on("message", (message: Message) => {
             setMessages((prev) => [...prev, message]);
         });
 
+        setSocket(newSocket);
+
         return () => {
-            socket.off("messages");
-            socket.off("message");
+            newSocket.disconnect();
         };
-    }, []);
+    }, [user]);
 
     const sendMessage = () => {
         if (input.trim()) {
-            socket.emit("message", input);
+            socket?.emit("message", input);
             setInput("");
         }
     };
@@ -76,6 +78,8 @@ export default function Chat() {
                 <div className="h-80 overflow-y-auto p-4 bg-gray-50 flex flex-col gap-2">
                     {messages.map((msg) => {
                         const isUserMessage = msg.userId !== user?.id;
+                        const messageContent = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+
                         return (
                             <div
                                 key={msg.id}
@@ -87,10 +91,10 @@ export default function Chat() {
                             >
                                 {isUserMessage && (
                                     <p className="text-sm font-semibold text-gray-700">
-                                        {msg.user?.name ? `${msg.user.name}:` : "Usuário desconhecido:"}
+                                        {msg.user?.fullName ? `${msg.user.fullName}:` : "Usuário desconhecido:"}
                                     </p>
                                 )}
-                                <p>{msg.content}</p>
+                                <p>{messageContent}</p>
                             </div>
                         );
                     })}
