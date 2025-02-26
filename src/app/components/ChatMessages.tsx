@@ -1,34 +1,34 @@
-import { Message } from "@/app/types/message-types";
+import { ChatMessagesProps } from "@/app/types/message-types";
+import { format } from "date-fns";
 
-interface ChatMessagesProps {
-    messages: Message[];
-    userId?: number;
-}
-
-export function ChatMessages({ messages, userId }: ChatMessagesProps) {
+export default function ChatMessages({ messages, userId, messagesEndRef }: ChatMessagesProps) {
     return (
-        <div className="h-96 overflow-y-auto p-4 bg-gray-700 flex flex-col gap-3">
+        <div className="h-96 overflow-y-auto p-4 bg-gray-50 flex flex-col gap-2">
             {messages.map((msg) => {
-                const isUserMessage = msg.userId === userId;
+                const isUserMessage = msg.userId !== Number(userId);
+                const messageContent = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+                const formattedTimestamp = msg.createdAt ? format(new Date(msg.createdAt), "HH:mm") : "";
 
                 return (
                     <div
                         key={msg.id}
-                        className={`max-w-[75%] p-3 rounded-xl text-sm shadow-md ${
-                            isUserMessage
-                                ? "bg-blue-500 text-white self-end"
-                                : "bg-gray-300 text-gray-900 self-start"
+                        className={`max-w-[80%] p-3 rounded-lg shadow-sm transition-shadow ${
+                            isUserMessage ? "bg-gray-300 text-black self-start" : "bg-blue-500 text-white self-end"
                         }`}
                     >
-                        {!isUserMessage && (
-                            <p className="text-xs font-semibold text-gray-800 mb-1">
-                                {msg.user?.fullName || "Usuário desconhecido"}
-                            </p>
-                        )}
-                        <p>{msg.content}</p>
+                        <div className="flex justify-between items-center">
+                            {isUserMessage && (
+                                <p className="text-sm font-semibold text-gray-700">
+                                    {msg.user?.fullName ? `${msg.user.fullName}:` : "Usuário desconhecido:"}
+                                </p>
+                            )}
+                            {formattedTimestamp && <span className="text-xs text-gray-500">{formattedTimestamp}</span>}
+                        </div>
+                        <p>{messageContent}</p>
                     </div>
                 );
             })}
+            <div ref={messagesEndRef} />
         </div>
     );
 }

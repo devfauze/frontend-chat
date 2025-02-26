@@ -1,19 +1,19 @@
-import { MessageCircle, LogOut } from "lucide-react";
+import { LogOut, MessageCircle } from "lucide-react";
 
 interface ChatHeaderProps {
-    onLogout: () => void;
+    logout: () => void;
 }
 
-export function ChatHeader({ onLogout }: ChatHeaderProps) {
+export default function ChatHeader({ logout }: ChatHeaderProps) {
     return (
-        <div className="bg-gray-900 p-4 flex justify-between items-center">
+        <div className="bg-gradient-to-r from-gray-800 to-gray-600 p-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
-                <MessageCircle className="w-6 h-6 text-gray-200" />
-                <h2 className="text-lg font-semibold text-gray-200">Chat</h2>
+                <MessageCircle className="w-6 h-6 text-white" />
+                <h2 className="text-lg font-semibold text-white">Chat</h2>
             </div>
             <button
-                onClick={onLogout}
-                className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-500 rounded-lg text-white text-sm transition-all"
+                onClick={logout}
+                className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white text-sm"
             >
                 <LogOut className="w-4 h-4" />
                 <span>Sair</span>

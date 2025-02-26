@@ -1,3 +1,5 @@
+import {RefObject} from "react";
+
 export interface Message {
     id: number;
     userId: number;
@@ -6,7 +8,8 @@ export interface Message {
     user?: { fullName: string };
 }
 
-export interface ChatMessageProps {
-    msg: Message;
-    isUserMessage: boolean;
+export interface ChatMessagesProps {
+    messages: Message[];
+    userId?: string;
+    messagesEndRef: RefObject<HTMLDivElement>;
 }
