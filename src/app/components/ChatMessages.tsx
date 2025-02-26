@@ -3,7 +3,7 @@ import { format } from "date-fns";
 
 export default function ChatMessages({ messages, userId, messagesEndRef }: ChatMessagesProps) {
     return (
-        <div className="h-96 overflow-y-auto p-4 bg-gray-50 flex flex-col gap-2">
+        <div className="h-96 overflow-y-auto p-4 bg-gray-50 flex flex-col gap-3 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200">
             {messages.map((msg) => {
                 const isUserMessage = msg.userId !== Number(userId);
                 const messageContent = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
@@ -12,11 +12,11 @@ export default function ChatMessages({ messages, userId, messagesEndRef }: ChatM
                 return (
                     <div
                         key={msg.id}
-                        className={`max-w-[80%] p-3 rounded-lg shadow-sm transition-shadow ${
-                            isUserMessage ? "bg-gray-300 text-black self-start" : "bg-blue-500 text-white self-end"
+                        className={`max-w-[80%] p-3 rounded-xl shadow-md transition-all ${
+                            isUserMessage ? "bg-gray-200 text-gray-900 self-start" : "bg-blue-500 text-white self-end"
                         }`}
                     >
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center mb-1">
                             {isUserMessage && (
                                 <p className="text-sm font-semibold text-gray-700">
                                     {msg.user?.fullName ? `${msg.user.fullName}:` : "Usuário desconhecido:"}
@@ -24,7 +24,7 @@ export default function ChatMessages({ messages, userId, messagesEndRef }: ChatM
                             )}
                             {formattedTimestamp && <span className="text-xs text-gray-500">{formattedTimestamp}</span>}
                         </div>
-                        <p>{messageContent}</p>
+                        <p className="text-sm leading-relaxed">{messageContent}</p>
                     </div>
                 );
             })}
@@ -32,3 +32,4 @@ export default function ChatMessages({ messages, userId, messagesEndRef }: ChatM
         </div>
     );
 }
+

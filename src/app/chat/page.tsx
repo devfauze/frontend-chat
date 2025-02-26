@@ -68,15 +68,19 @@ function Chat() {
     };
 
     return (
-        <div className="flex items-center justify-center h-screen bg-gray-900">
-            <div className="w-full max-w-md rounded-xl shadow-lg overflow-hidden">
+        <div className="flex items-center justify-center h-screen bg-gray-100 p-4">
+            <div className="w-full max-w-lg bg-white shadow-xl rounded-2xl overflow-hidden flex flex-col">
                 <ChatHeader logout={logout} />
-                <ChatMessages messages={messages} userId={user?.id?.toString()} messagesEndRef={messagesEndRef} />
 
-                <div className="text-gray-500 text-sm bg-white px-4 h-3">
-                    {Object.values(typingUsers).length > 0 &&
-                        `${Object.values(typingUsers).join(", ")} está digitando...`}
+                <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
+                    <ChatMessages messages={messages} userId={user?.id?.toString()} messagesEndRef={messagesEndRef} />
                 </div>
+
+                {Object.values(typingUsers).length > 0 && (
+                    <div className="text-sm text-gray-500 px-4 py-2 bg-gray-50 animate-pulse">
+                        {Object.values(typingUsers).join(", ")} está digitando...
+                    </div>
+                )}
 
                 <ChatInput input={input} setInput={setInput} sendMessage={sendMessage} />
             </div>

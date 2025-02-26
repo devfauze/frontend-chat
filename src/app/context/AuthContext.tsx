@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const login = async (email: string, password: string) => {
+        setLoading(true);
         try {
             const { data } = await axios.post("http://localhost:3333/login", { email, password });
 
@@ -85,6 +86,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         } catch (error) {
             console.error("Erro ao fazer login:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
