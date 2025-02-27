@@ -22,7 +22,7 @@ function Chat() {
     const [socket, setSocket] = useState<Socket | null>(null);
     const [currentRoom, setCurrentRoom] = useState("Geral");
     const messagesEndRef = useRef<HTMLDivElement>(null as unknown as HTMLDivElement);
-    const { typingUsers } = useAuth();
+    const [typingUsers, setTypingUsers] = useState<string[]>([]);
     const [search, setSearch] = useState("");
     const [searchResults, setSearchResults] = useState([]);
 
@@ -48,10 +48,24 @@ function Chat() {
         socket.off("messages").on("messages", setMessages);
         socket.off("message").on("message", (message: Message) => setMessages((prev) => [...prev, message]));
 
+        socket.on("userTyping", ({ fullName }) => {
+            setTypingUsers((prev) => {
+                if (!prev.includes(fullName)) return [...prev, fullName];
+                return prev;
+            });
+        });
+
+        socket.on("userStoppedTyping", ({ fullName }) => {
+            setTypingUsers((prev) => prev.filter((name) => name !== fullName));
+        });
+
         return () => {
             socket.emit("leaveRoom", currentRoom);
+            socket.off("userTyping");
+            socket.off("userStoppedTyping");
         };
     }, [user, currentRoom]);
+
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -126,12 +140,15 @@ function Chat() {
                     messagesEndRef={messagesEndRef}
                 />
 
-                <div className="text-gray-500 text-sm bg-white px-4 h-3">
-                    {Object.values(typingUsers).length > 0 &&
-                        `${Object.values(typingUsers).join(", ")} está digitando...`}
+                <div className="bg-gray-50 h-5">
+                    {typingUsers.length > 0 && (
+                        <p className="bg-white text-sm text-gray-500 px-4 ">
+                            {typingUsers.join(', ')} {typingUsers.length > 1 ? 'estão' : 'está'} digitando...
+                        </p>
+                    )}
                 </div>
 
-                <ChatInput input={input} setInput={setInput} sendMessage={sendMessage} />
+                <ChatInput input={input} setInput={setInput} sendMessage={sendMessage} currentRoom={currentRoom} />
             </div>
         </div>
     );
