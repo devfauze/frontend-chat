@@ -10,6 +10,7 @@ import ChatInput from "../components/ChatInput";
 import ChatRooms from "../components/ChatRooms";
 import { Message } from "@/app/types/message-types";
 import { connectSocket, getSocket } from "@/app/services/socket";
+import {withAuth} from "@/app/hoc/withAuth";
 
 const rooms = ["Geral", "Trabalho", "Jogos", "Estudos"];
 
@@ -136,4 +137,4 @@ function Chat() {
     );
 }
 
-export default Chat;
+export default withAuth(Chat);
