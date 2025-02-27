@@ -20,11 +20,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const token = localStorage.getItem("token");
         const storedUser = localStorage.getItem("user");
 
-        if (token && storedUser) {
-            setUser(JSON.parse(storedUser));
-            connectWebSocket(token);
+        if (!token || !storedUser) {
+            setLoading(false);
+            return;
         }
 
+        setUser(JSON.parse(storedUser));
+
+        const existingSocket = getSocket();
+        if (existingSocket) {
+            existingSocket.disconnect();
+        }
+
+        connectWebSocket(token);
         setLoading(false);
     }, []);
 
