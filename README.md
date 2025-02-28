@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend - Chat ao Vivo
 
-## Getting Started
+Este é o frontend do sistema de chat ao vivo, desenvolvido com **Next.js**. Ele se comunica com o backend para fornecer uma experiência de chat interativa em tempo real, com suporte a múltiplas salas e funcionalidades de mensagens.
 
-First, run the development server:
+## Funcionalidades
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Chat em tempo real com WebSocket.
+- Suporte a múltiplas salas de chat.
+- Design responsivo e otimizado para dispositivos móveis.
+- Histórico de conversas com paginação.
+- Prevenção contra ataques XSS.
+- Indicadores de digitação em tempo real.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tecnologias
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Next.js**: Framework React para SSR (Server-Side Rendering) e SSG (Static Site Generation).
+- **WebSocket**: Comunicação em tempo real com o backend.
+- **Tailwind CSS**: Framework CSS para design responsivo.
+- **Axios**: Biblioteca para fazer requisições HTTP.
+- **TypeScript**: Superset do JavaScript com tipagem estática.
+  
+## Instruções de Instalação e Execução
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Pré-requisitos
 
-## Learn More
+- **Node.js** (versão 14.x ou superior)
+- **npm** (gerenciador de pacotes)
 
-To learn more about Next.js, take a look at the following resources:
+### Instalação
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Clone o repositório:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ```bash
+   git clone https://github.com/devfauze/frontend-chat.git
+   cd frontend-chat
+   npm run setup
