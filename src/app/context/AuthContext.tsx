@@ -39,8 +39,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const connectWebSocket = (token: string) => {
         const socket = connectSocket(token);
 
-        socket.on("messages", (msgs: Message[]) => {
-            setMessages(msgs.map((msg) => ({ ...msg, createdAt: format(new Date(msg.createdAt), "HH:mm") })));
+        socket.on("messages", (response: { meta: any; data: Message[] }) => {
+            if (Array.isArray(response.data)) {
+                setMessages(response.data.map((msg) => ({
+                    ...msg,
+                    createdAt: format(new Date(msg.createdAt), "HH:mm")
+                })));
+            } else {
+                console.error("Mensagem recebida não contém um array de mensagens:", response);
+            }
         });
 
         socket.on("message", (msg: Message) => {
@@ -76,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = async (email: string, password: string) => {
         setLoading(true);
         try {
-            const { data } = await axios.post("http://localhost:3333/login", { email, password });
+            const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/login`, { email, password });
 
             if (data.token) {
                 document.cookie = `token=${data.token}; path=/`;
@@ -101,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const register = async (full_name: string, email: string, password: string) => {
         try {
-            await axios.post("http://localhost:3333/register", { full_name, email, password });
+            await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/register`, { full_name, email, password });
             await login(email, password);
         } catch (error) {
             console.error("Erro ao registrar:", error);

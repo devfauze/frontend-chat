@@ -7,7 +7,9 @@ export const connectSocket = (token: string): Socket => {
         socket.disconnect();
     }
 
-    socket = io("ws://localhost:3333", {
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "ws://localhost:3333";
+
+    socket = io(socketUrl, {
         auth: { token },
         reconnectionAttempts: 5,
         reconnectionDelay: 2000,

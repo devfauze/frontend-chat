@@ -2,8 +2,17 @@ import { ChatMessagesProps } from "@/app/types/message-types";
 import { format } from "date-fns";
 
 export default function ChatMessages({ messages, userId, messagesEndRef }: ChatMessagesProps) {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+        return (
+            <div className="flex items-center justify-center h-full text-gray-500">
+                Nenhuma mensagem ainda. Seja o primeiro a enviar!
+                <div ref={messagesEndRef} />
+            </div>
+        );
+    }
+
     return (
-        <div className="h-96 overflow-y-auto p-4 bg-gray-50 flex flex-col gap-3 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200">
+        <>
             {messages.map((msg) => {
                 const isUserMessage = msg.userId !== Number(userId);
                 const messageContent = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
@@ -29,7 +38,7 @@ export default function ChatMessages({ messages, userId, messagesEndRef }: ChatM
                 );
             })}
             <div ref={messagesEndRef} />
-        </div>
+        </>
     );
 }
 

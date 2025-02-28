@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Socket } from "socket.io-client";
@@ -10,7 +10,7 @@ import ChatInput from "../components/ChatInput";
 import ChatRooms from "../components/ChatRooms";
 import { Message } from "@/app/types/message-types";
 import { connectSocket, getSocket } from "@/app/services/socket";
-import {withAuth} from "@/app/hoc/withAuth";
+import { withAuth } from "@/app/hoc/withAuth";
 
 const rooms = ["Geral", "Trabalho", "Jogos", "Estudos"];
 
@@ -22,9 +22,16 @@ function Chat() {
     const [socket, setSocket] = useState<Socket | null>(null);
     const [currentRoom, setCurrentRoom] = useState("Geral");
     const messagesEndRef = useRef<HTMLDivElement>(null as unknown as HTMLDivElement);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
     const [typingUsers, setTypingUsers] = useState<string[]>([]);
     const [search, setSearch] = useState("");
-    const [searchResults, setSearchResults] = useState([]);
+    const [searchResults, setSearchResults] = useState<Message[]>([]);
+    const [page, setPage] = useState(1);
+    const [searchPage, setSearchPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [hasMoreSearch, setHasMoreSearch] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const limit = 10;
 
     useEffect(() => {
         if (!user) router.push("/login");
@@ -32,6 +39,11 @@ function Chat() {
 
     useEffect(() => {
         if (!user) return;
+
+        setPage(1);
+        setMessages([]);
+        setHasMore(true);
+        fetchMessages(1);
 
         const token = localStorage.getItem("token");
         if (!token) return;
@@ -66,10 +78,42 @@ function Chat() {
         };
     }, [user, currentRoom]);
 
+    const fetchMessages = async (pageToFetch: number) => {
+        if (!user || isLoading) return;
 
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+        setIsLoading(true);
+        try {
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/messages?room=${currentRoom}&page=${pageToFetch}&limit=${limit}`
+            );
+            const data = await response.json();
+
+            if (Array.isArray(data.data)) {
+                if (data.data.length < limit) {
+                    setHasMore(false);
+                }
+
+                if (pageToFetch === 1) {
+                    setMessages(data.data);
+                } else {
+                    setMessages(prev => {
+                        if (Array.isArray(prev)) {
+                            return [...data.data, ...prev];
+                        }
+                        return data.data;
+                    });
+                }
+            } else {
+                console.error("A resposta não contém um array de mensagens", data);
+            }
+
+            setPage(pageToFetch);
+        } catch (error) {
+            console.error("Erro ao buscar mensagens:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleSearch = async (query: string) => {
         if (!query.trim()) {
@@ -80,13 +124,41 @@ function Chat() {
         if (query.length < 2) return;
 
         try {
-            const response = await fetch(`http://localhost:3333/messages/search?query=${query}&room=${currentRoom}`);
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/messages/search?query=${query}&room=${currentRoom}`);
             const data = await response.json();
             setSearchResults(data);
         } catch (error) {
             console.error("Erro ao buscar mensagens:", error);
         }
     };
+
+    const handleScroll = useCallback(() => {
+        if (!messagesContainerRef.current || isLoading) return;
+
+        const { scrollTop } = messagesContainerRef.current;
+
+        if (scrollTop < 50) {
+            if (search && hasMoreSearch) {
+                handleSearch(search);
+            } else if (!search && hasMore) {
+                fetchMessages(page + 1);
+            }
+        }
+    }, [page, searchPage, isLoading, search, hasMore, hasMoreSearch]);
+
+    useEffect(() => {
+        const messagesContainer = messagesContainerRef.current;
+        if (messagesContainer) {
+            messagesContainer.addEventListener('scroll', handleScroll);
+            return () => messagesContainer.removeEventListener('scroll', handleScroll);
+        }
+    }, [handleScroll]);
+
+    useEffect(() => {
+        if (page === 1 || messages.length === 0) {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [messages, page]);
 
     const sendMessage = () => {
         const socket = getSocket();
@@ -100,6 +172,13 @@ function Chat() {
 
         socket.emit("message", messageData);
         setInput("");
+    };
+
+    const clearSearch = () => {
+        setSearch("");
+        setSearchResults([]);
+        setSearchPage(1);
+        setHasMoreSearch(true);
     };
 
     return (
@@ -129,26 +208,43 @@ function Chat() {
                     currentRoom={currentRoom}
                     onSelectRoom={(room) => {
                         setCurrentRoom(room);
-                        setSearch("");
-                        setSearchResults([]);
+                        clearSearch();
                     }}
                 />
 
-                <ChatMessages
-                    messages={searchResults.length > 0 ? searchResults : messages}
-                    userId={user?.id?.toString()}
-                    messagesEndRef={messagesEndRef}
-                />
+                <div
+                    ref={messagesContainerRef}
+                    className="h-96 overflow-y-auto p-4 bg-gray-50 flex flex-col gap-3 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200"
+                >
+                    {isLoading && page > 1 && (
+                        <div className="text-center text-gray-500 py-2">Carregando mensagens...</div>
+                    )}
+
+                    <ChatMessages
+                        messages={searchResults.length > 0 ? searchResults : messages}
+                        userId={user?.id?.toString()}
+                        messagesEndRef={messagesEndRef}
+                    />
+
+                    {!isLoading && search && searchResults.length === 0 && (
+                        <div className="text-center text-gray-500 py-2">Nenhuma mensagem encontrada</div>
+                    )}
+                </div>
 
                 <div className="bg-gray-50 h-5">
                     {typingUsers.length > 0 && (
-                        <p className="bg-white text-sm text-gray-500 px-4 ">
+                        <p className="bg-white text-sm text-gray-500 px-4">
                             {typingUsers.join(', ')} {typingUsers.length > 1 ? 'estão' : 'está'} digitando...
                         </p>
                     )}
                 </div>
 
-                <ChatInput input={input} setInput={setInput} sendMessage={sendMessage} currentRoom={currentRoom} />
+                <ChatInput
+                    input={input}
+                    setInput={setInput}
+                    sendMessage={sendMessage}
+                    currentRoom={currentRoom}
+                />
             </div>
         </div>
     );
